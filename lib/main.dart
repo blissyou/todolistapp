@@ -32,6 +32,7 @@ class todolist extends StatefulWidget {
 }
 
 class _todolistState extends State<todolist> {
+  bool _isChecked = false;
   String title = "";
   String decription = "";
   List<Todo> todos = [];
@@ -81,8 +82,45 @@ class _todolistState extends State<todolist> {
           itemBuilder: (_, index) {
             return InkWell(
                 child: ListTile(
+              trailing: Checkbox(
+                value: _isChecked,
+                onChanged: (bool? value) {
+                  setState(() {
+                    _isChecked = value ?? false;
+                  });
+                },
+              ),
               title: Text(todos[index].title),
               subtitle: Text(todos[index].description),
+              onTap: () {
+                showDialog(
+                    context: context,
+                    builder: (_) {
+                      return AlertDialog(
+                        actions: [
+                          Center(
+                            child: Text(todos[index].title),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(todos[index].description),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  setState(() {
+                                    todos.removeAt(index);
+                                  });
+                                },
+                              ),
+                            ],
+                          )
+                        ],
+                      );
+                    });
+              },
             ));
           },
           itemCount: todos.length,
