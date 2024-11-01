@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-
-//TODO 앱을 꺼다 켜도 할일 목록이 남도록 해야함
-//TODO 스와이프 삭제 기능에서 다시 의사를 물어보는 삭제기능을 추가
-//TODO 캘린더 기능 추가
-//TODO 달 별로 달성한 할일을 그래프로 표현
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+//TODO 캘린더 기능 구현
+//TODO 24시가 되면 한 일에 대해서 히스토리로 넘김 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
@@ -31,7 +28,27 @@ class Todo {
   Todo({
     required this.title,
     this.isChecked = false,
-  }) : createdAt = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+    String? createdAt,
+  }) : createdAt =
+            createdAt ?? DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+
+  // JSON 변환을 위한 메서드
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'createdAt': createdAt,
+      'isChecked': isChecked,
+    };
+  }
+
+  // JSON에서 객체로 변환하기 위한 팩토리 생성자
+  factory Todo.fromJson(Map<String, dynamic> json) {
+    return Todo(
+      title: json['title'],
+      isChecked: json['isChecked'],
+      createdAt: json['createdAt'],
+    );
+  }
 }
 
 class TodoList extends StatefulWidget {
@@ -43,6 +60,32 @@ class _TodoListState extends State<TodoList> {
   List<Todo> todos = [];
   final TextEditingController _controller = TextEditingController();
   bool _isAdding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodos(); // 앱 시작 시 데이터 로드
+  }
+
+  // 데이터 로드 함수
+  void _loadTodos() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? todoData = prefs.getStringList('todos');
+    if (todoData != null) {
+      setState(() {
+        todos =
+            todoData.map((item) => Todo.fromJson(json.decode(item))).toList();
+      });
+    }
+  }
+
+  // 데이터 저장 함수
+  void _saveTodos() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> todoData =
+        todos.map((item) => json.encode(item.toJson())).toList();
+    prefs.setStringList('todos', todoData);
+  }
 
   void _toggleAddTodo() {
     setState(() {
@@ -56,18 +99,38 @@ class _TodoListState extends State<TodoList> {
         todos.add(Todo(title: _controller.text));
         _controller.clear();
         _isAdding = false; // 입력 후 입력창 닫기
+        _saveTodos(); // 할 일 추가 시 데이터 저장
       });
     }
   }
 
-  void _showTopSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(top: 10, left: 10, right: 10),
-        duration: Duration(seconds: 2),
-      ),
+  void _confirmDelete(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("삭제 확인"),
+          content: Text("정말로 삭제하시겠습니까?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // 팝업 닫기
+              },
+              child: Text("취소"),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  todos.removeAt(index);
+                  _saveTodos(); // 삭제 후 데이터 저장
+                });
+                Navigator.of(context).pop(); // 팝업 닫기
+              },
+              child: Text("확인", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -93,24 +156,23 @@ class _TodoListState extends State<TodoList> {
                 return Dismissible(
                   key: UniqueKey(),
                   direction: DismissDirection.endToStart,
+                  confirmDismiss: (direction) async {
+                    _confirmDelete(index);
+                    return false; // 즉시 삭제하지 않도록 함
+                  },
                   background: Container(
                     alignment: Alignment.centerRight,
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     color: Colors.red,
                     child: Icon(Icons.delete, color: Colors.white),
                   ),
-                  onDismissed: (direction) {
-                    setState(() {
-                      todos.removeAt(index);
-                    });
-                    _showTopSnackBar("삭제되었습니다");
-                  },
                   child: ListTile(
                     leading: Checkbox(
                       value: todo.isChecked,
                       onChanged: (bool? value) {
                         setState(() {
                           todo.isChecked = value ?? false;
+                          _saveTodos(); // 체크박스 변경 시 데이터 저장
                         });
                       },
                     ),
@@ -146,7 +208,7 @@ class _TodoListState extends State<TodoList> {
                         contentPadding:
                             EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                         border: OutlineInputBorder(),
-                        isDense: true, // 입력 필드를 더 compact하게 함
+                        isDense: true,
                       ),
                       onSubmitted: (_) => _addNewTodo(),
                     ),
