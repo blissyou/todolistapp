@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+
+//TODO 앱을 꺼다 켜도 할일 목록이 남도록 해야함
+//TODO 스와이프 삭제 기능에서 다시 의사를 물어보는 삭제기능을 추가
+//TODO 캘린더 기능 추가
+//TODO 달 별로 달성한 할일을 그래프로 표현
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
