@@ -1,62 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-//TODO 캘린더 기능 구현
-//TODO 24시가 되면 한 일에 대해서 히스토리로 넘김 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+import '../models/todo.dart';
+import '../services/todo_service.dart';
+
+class TodoListScreen extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'To Do List',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: TodoList(),
-    );
-  }
+  State<TodoListScreen> createState() => _TodoListScreenState();
 }
 
-class Todo {
-  final String title;
-  final String createdAt;
-  bool isChecked;
-
-  Todo({
-    required this.title,
-    this.isChecked = false,
-    String? createdAt,
-  }) : createdAt =
-            createdAt ?? DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
-
-  // JSON 변환을 위한 메서드
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'createdAt': createdAt,
-      'isChecked': isChecked,
-    };
-  }
-
-  // JSON에서 객체로 변환하기 위한 팩토리 생성자
-  factory Todo.fromJson(Map<String, dynamic> json) {
-    return Todo(
-      title: json['title'],
-      isChecked: json['isChecked'],
-      createdAt: json['createdAt'],
-    );
-  }
-}
-
-class TodoList extends StatefulWidget {
-  @override
-  State<TodoList> createState() => _TodoListState();
-}
-
-class _TodoListState extends State<TodoList> {
+class _TodoListScreenState extends State<TodoListScreen> {
+  final TodoService _todoService = TodoService();
   List<Todo> todos = [];
   final TextEditingController _controller = TextEditingController();
   bool _isAdding = false;
@@ -64,27 +16,16 @@ class _TodoListState extends State<TodoList> {
   @override
   void initState() {
     super.initState();
-    _loadTodos(); // 앱 시작 시 데이터 로드
+    _loadTodos();
   }
 
-  // 데이터 로드 함수
-  void _loadTodos() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String>? todoData = prefs.getStringList('todos');
-    if (todoData != null) {
-      setState(() {
-        todos =
-            todoData.map((item) => Todo.fromJson(json.decode(item))).toList();
-      });
-    }
+  Future<void> _loadTodos() async {
+    todos = await _todoService.loadTodos();
+    setState(() {});
   }
 
-  // 데이터 저장 함수
-  void _saveTodos() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> todoData =
-        todos.map((item) => json.encode(item.toJson())).toList();
-    prefs.setStringList('todos', todoData);
+  Future<void> _saveTodos() async {
+    await _todoService.saveTodos(todos);
   }
 
   void _toggleAddTodo() {
@@ -98,8 +39,8 @@ class _TodoListState extends State<TodoList> {
       setState(() {
         todos.add(Todo(title: _controller.text));
         _controller.clear();
-        _isAdding = false; // 입력 후 입력창 닫기
-        _saveTodos(); // 할 일 추가 시 데이터 저장
+        _isAdding = false;
+        _saveTodos();
       });
     }
   }
@@ -113,18 +54,16 @@ class _TodoListState extends State<TodoList> {
           content: Text("정말로 삭제하시겠습니까?"),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // 팝업 닫기
-              },
+              onPressed: () => Navigator.of(context).pop(),
               child: Text("취소"),
             ),
             TextButton(
               onPressed: () {
                 setState(() {
                   todos.removeAt(index);
-                  _saveTodos(); // 삭제 후 데이터 저장
+                  _saveTodos();
                 });
-                Navigator.of(context).pop(); // 팝업 닫기
+                Navigator.of(context).pop();
               },
               child: Text("확인", style: TextStyle(color: Colors.red)),
             ),
@@ -143,7 +82,7 @@ class _TodoListState extends State<TodoList> {
           IconButton(
             icon: Icon(Icons.add),
             onPressed: _toggleAddTodo,
-          ),
+          )
         ],
       ),
       body: Column(
@@ -158,7 +97,7 @@ class _TodoListState extends State<TodoList> {
                   direction: DismissDirection.endToStart,
                   confirmDismiss: (direction) async {
                     _confirmDelete(index);
-                    return false; // 즉시 삭제하지 않도록 함
+                    return false;
                   },
                   background: Container(
                     alignment: Alignment.centerRight,
@@ -172,7 +111,7 @@ class _TodoListState extends State<TodoList> {
                       onChanged: (bool? value) {
                         setState(() {
                           todo.isChecked = value ?? false;
-                          _saveTodos(); // 체크박스 변경 시 데이터 저장
+                          _saveTodos();
                         });
                       },
                     ),
