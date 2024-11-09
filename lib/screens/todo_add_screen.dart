@@ -10,6 +10,7 @@ class TodoListScreen extends StatefulWidget {
 class _TodoListScreenState extends State<TodoListScreen> {
   final TodoService _todoService = TodoService();
   List<Todo> todos = [];
+
   final TextEditingController _controller = TextEditingController();
   bool _isAdding = false;
 
@@ -76,7 +77,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Color.fromARGB(255, 135, 201, 255),
         title: Text('To Do List'),
         actions: [
           IconButton(
@@ -139,6 +142,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
               padding: const EdgeInsets.all(8.0),
               child: Row(
                 children: [
+                  SizedBox(
+                    height: 30,
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _controller,
@@ -159,6 +165,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 ],
               ),
             ),
+          SizedBox(height: 10)
         ],
       ),
     );
