@@ -1,6 +1,7 @@
 # todolist
 
-A new Flutter project.
+## 개발 내용
+- todolist를 구현한 어플리케이션 달력으로 자신의 히스토리를 보고 todolist를 추가하여 일상생활에 삶의 질을 올린다.
 
 ## Getting Started
 
