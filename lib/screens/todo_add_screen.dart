@@ -1,52 +1,11 @@
 import 'package:flutter/material.dart';
-import '../models/todo.dart';
-import '../services/todo_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/todo_provider.dart';
 
-class TodoListScreen extends StatefulWidget {
-  @override
-  State<TodoListScreen> createState() => _TodoListScreenState();
-}
-
-class _TodoListScreenState extends State<TodoListScreen> {
-  final TodoService _todoService = TodoService();
-  List<Todo> todos = [];
-
+class TodoListScreen extends StatelessWidget {
   final TextEditingController _controller = TextEditingController();
-  bool _isAdding = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadTodos();
-  }
-
-  Future<void> _loadTodos() async {
-    todos = await _todoService.loadTodos();
-    setState(() {});
-  }
-
-  Future<void> _saveTodos() async {
-    await _todoService.saveTodos(todos);
-  }
-
-  void _toggleAddTodo() {
-    setState(() {
-      _isAdding = !_isAdding;
-    });
-  }
-
-  void _addNewTodo() {
-    if (_controller.text.isNotEmpty) {
-      setState(() {
-        todos.add(Todo(title: _controller.text));
-        _controller.clear();
-        _isAdding = false;
-        _saveTodos();
-      });
-    }
-  }
-
-  void _confirmDelete(int index) {
+  void _confirmDelete(BuildContext context, int index) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -60,10 +19,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
             ),
             TextButton(
               onPressed: () {
-                setState(() {
-                  todos.removeAt(index);
-                  _saveTodos();
-                });
+                Provider.of<TodoProvider>(context, listen: false)
+                    .removeTodoAt(index);
                 Navigator.of(context).pop();
               },
               child: Text("확인", style: TextStyle(color: Colors.red)),
@@ -74,8 +31,18 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
+  void _addNewTodo(BuildContext context) {
+    if (_controller.text.isNotEmpty) {
+      Provider.of<TodoProvider>(context, listen: false)
+          .addTodo(_controller.text);
+      _controller.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final todoProvider = Provider.of<TodoProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -84,89 +51,86 @@ class _TodoListScreenState extends State<TodoListScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.add),
-            onPressed: _toggleAddTodo,
-          )
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: todos.length,
-              itemBuilder: (_, index) {
-                final todo = todos[index];
-                return Dismissible(
-                  key: UniqueKey(),
-                  direction: DismissDirection.endToStart,
-                  confirmDismiss: (direction) async {
-                    _confirmDelete(index);
-                    return false;
-                  },
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    color: Colors.red,
-                    child: Icon(Icons.delete, color: Colors.white),
-                  ),
-                  child: ListTile(
-                    leading: Checkbox(
-                      value: todo.isChecked,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          todo.isChecked = value ?? false;
-                          _saveTodos();
-                        });
-                      },
-                    ),
-                    title: Text(
-                      todo.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        decoration: todo.isChecked
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                        color: todo.isChecked ? Colors.grey : Colors.black,
-                      ),
-                    ),
-                    subtitle: Text(
-                      todo.createdAt,
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (_isAdding)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  SizedBox(
-                    height: 30,
-                  ),
-                  Expanded(
-                    child: TextField(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text('할 일 추가'),
+                    content: TextField(
                       controller: _controller,
                       decoration: InputDecoration(
                         hintText: '할 일을 입력하세요',
-                        contentPadding:
-                            EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                         border: OutlineInputBorder(),
-                        isDense: true,
                       ),
-                      onSubmitted: (_) => _addNewTodo(),
+                      onSubmitted: (_) {
+                        _addNewTodo(context);
+                        Navigator.of(context).pop();
+                      },
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.send),
-                    onPressed: _addNewTodo,
-                  ),
-                ],
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: Text('취소'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          _addNewTodo(context);
+                          Navigator.of(context).pop();
+                        },
+                        child: Text('추가'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+      body: ListView.builder(
+        itemCount: todoProvider.todos.length,
+        itemBuilder: (_, index) {
+          final todo = todoProvider.todos[index];
+          return Dismissible(
+            key: UniqueKey(),
+            direction: DismissDirection.endToStart,
+            confirmDismiss: (direction) async {
+              _confirmDelete(context, index);
+              return false;
+            },
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              color: Colors.red,
+              child: Icon(Icons.delete, color: Colors.white),
+            ),
+            child: ListTile(
+              leading: Checkbox(
+                value: todo.isChecked,
+                onChanged: (bool? value) {
+                  todoProvider.toggleTodoStatus(index);
+                },
+              ),
+              title: Text(
+                todo.title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  decoration: todo.isChecked
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                  color: todo.isChecked ? Colors.grey : Colors.black,
+                ),
+              ),
+              subtitle: Text(
+                todo.createdAt,
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ),
-          SizedBox(height: 10)
-        ],
+          );
+        },
       ),
     );
   }
