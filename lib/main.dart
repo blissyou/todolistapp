@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:todolist/providers/todo_provider.dart';
+import 'package:todolist/controller/todo_provider.dart';
 import 'screens/todo_navigationbar.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';

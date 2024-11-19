@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:todolist/services/todo_service.dart';
-import '../providers/todo_provider.dart';
+import '../controller/todo_provider.dart';
 
 class Calendar extends StatefulWidget {
   const Calendar({super.key});
@@ -52,7 +51,8 @@ class _CalendarState extends State<Calendar> {
             },
             eventLoader: (day) {
               final formattedDate = _formatDate(day);
-              return todosByDate[formattedDate] ?? [];
+              final events = todosByDate[formattedDate] ?? [];
+              return events.isNotEmpty ? [events.first] : [];
             },
           ),
           const SizedBox(height: 16),
