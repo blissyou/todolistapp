@@ -17,5 +17,13 @@ class TodoService {
         todos.map((item) => json.encode(item.toJson())).toList();
     await prefs.setStringList('todos', todoData);
   }
-}
 
+  Future<void> debugSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+
+    for (String key in keys) {
+      print('Key: $key, Value: ${prefs.get(key)}');
+    }
+  }
+}
